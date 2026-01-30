@@ -76,9 +76,16 @@ const App: React.FC = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
 
-  const handlePlaceSelect = async (name: string) => {
+  // IMPORTANT: Re-fetch content when language changes to translate existing view
+  useEffect(() => {
+    if (selectedPlace && view === 'explore') {
+      fetchPlaceContent(selectedPlace.name, false); // false to avoid jumping back to top unnecessarily
+    }
+  }, [lang]);
+
+  const fetchPlaceContent = async (name: string, shouldSwitchView: boolean = true) => {
     setLoading(true);
-    setView('explore');
+    if (shouldSwitchView) setView('explore');
     try {
       const summary = await WikipediaService.getSummary(name);
       const images = await WikipediaService.getPlaceImages(name);
@@ -92,6 +99,10 @@ const App: React.FC = () => {
     }
   };
 
+  const handlePlaceSelect = (name: string) => {
+    fetchPlaceContent(name);
+  };
+
   const handleChatSend = async () => {
     if (!chatInput.trim()) return;
     const userMsg: ChatMessage = { role: 'user', text: chatInput };
@@ -102,7 +113,7 @@ const App: React.FC = () => {
       const response = await GeminiService.chat(chatInput, chatMessages, lang);
       setChatMessages(prev => [...prev, { role: 'model', text: response }]);
     } catch (e) {
-      setChatMessages(prev => [...prev, { role: 'model', text: "I'm having trouble connecting to history right now. Please try again." }]);
+      setChatMessages(prev => [...prev, { role: 'model', text: "Connection issues. Please try again." }]);
     }
   };
 
@@ -122,7 +133,7 @@ const App: React.FC = () => {
       const res = await GeminiService.reconstructMonument(originalImage, selectedPlace?.name || "Andhra Heritage");
       setReconstructedImage(res);
     } catch (e) {
-      alert("Reconstruction failed. Ensure the image is clear and try again.");
+      alert("Reconstruction failed. Ensure the image is clear.");
     } finally {
       setReconLoading(false);
     }
@@ -138,10 +149,10 @@ const App: React.FC = () => {
             onClick={() => setView('home')}
           >
             <div className="w-10 h-10 bg-amber-700 rounded-lg flex items-center justify-center text-white font-bold text-xl font-heritage">
-              इ
+              ఇ
             </div>
             <div>
-              <h1 className="text-2xl font-bold font-heritage tracking-wider text-amber-900 leading-none">ITIHAASA</h1>
+              <h1 className="text-2xl font-bold font-heritage tracking-wider text-amber-900 leading-none">ఇతిహాస</h1>
               <p className="text-[10px] uppercase tracking-widest text-stone-500 font-bold">Heritage Reimagined</p>
             </div>
           </div>
@@ -162,7 +173,6 @@ const App: React.FC = () => {
       <main className="flex-grow">
         {view === 'home' && (
           <div className="relative">
-            {/* Hero Section */}
             <div className="relative h-[80vh] flex items-center justify-center text-center overflow-hidden bg-stone-900">
               <img 
                 src="https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?auto=format&fit=crop&q=80&w=2000" 
@@ -171,29 +181,32 @@ const App: React.FC = () => {
               />
               <div className="relative z-10 max-w-4xl px-4">
                 <h2 className="text-5xl md:text-7xl font-bold font-heritage text-white mb-6 animate-fade-in">
-                  Discover the Soul of Andhra Pradesh
+                  {lang === 'en' ? 'Discover the Soul of Andhra Pradesh' : lang === 'te' ? 'ఆంధ్రప్రదేశ్ ఆత్మను అన్వేషించండి' : 'आंध्र प्रदेश की आत्मा को जानें'}
                 </h2>
                 <p className="text-xl text-stone-200 mb-8 leading-relaxed max-w-2xl mx-auto">
-                  Journey through thousands of years of history, architecture, and literature. ITIHAASA uses cutting-edge AI to bring forgotten monuments back to life.
+                  {lang === 'en' 
+                    ? 'Journey through thousands of years of history, architecture, and literature. ITIHAASA uses cutting-edge AI to bring forgotten monuments back to life.'
+                    : lang === 'te'
+                    ? 'వేల సంవత్సరాల చరిత్ర, వాస్తుశిల్పం మరియు సాహిత్యం ద్వారా ప్రయాణం చేయండి. ఇతిహాస అత్యాధునిక AIని ఉపయోగించి మరచిపోయిన స్మారక చిహ్నాలకు జీవం పోస్తుంది.'
+                    : 'हजारों वर्षों के इतिहास, वास्तुकला और साहित्य की यात्रा करें। इतिहास आधुनिक एआई का उपयोग करके भूले हुए स्मारकों को फिर से जीवित करता है।'}
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                   <button 
                     onClick={() => setView('explore')}
                     className="w-full sm:w-auto px-8 py-4 bg-amber-600 hover:bg-amber-700 text-white rounded-full font-bold text-lg transition shadow-xl flex items-center justify-center gap-2"
                   >
-                    <Compass size={24} /> Explore Heritage
+                    <Compass size={24} /> {lang === 'en' ? 'Explore Heritage' : lang === 'te' ? 'వారసత్వాన్ని అన్వేషించండి' : 'विरासत का अन्वेषण करें'}
                   </button>
                   <button 
                     onClick={() => setView('reconstruct')}
                     className="w-full sm:w-auto px-8 py-4 bg-white/10 hover:bg-white/20 text-white border border-white/30 rounded-full font-bold text-lg transition backdrop-blur-md flex items-center justify-center gap-2"
                   >
-                    <History size={24} /> AI Reconstruction
+                    <History size={24} /> {lang === 'en' ? 'AI Reconstruction' : lang === 'te' ? 'AI పునర్నిర్మాణం' : 'एआई पुनर्निर्माण'}
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Quick Access Search */}
             <div className="max-w-7xl mx-auto px-4 -mt-10 relative z-20">
               <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 flex flex-col md:flex-row gap-6 items-center">
                 <div className="flex-grow w-full">
@@ -202,7 +215,7 @@ const App: React.FC = () => {
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" size={20} />
                     <input 
                       type="text"
-                      placeholder="Enter a place (e.g., Lepakshi, Amravati)..."
+                      placeholder={lang === 'en' ? "Search for a heritage site..." : lang === 'te' ? "వారసత్వ ప్రదేశం కోసం వెతకండి..." : "विरासत स्थल की खोज करें..."}
                       className="w-full pl-12 pr-4 py-3 bg-stone-100 border-none rounded-xl focus:ring-2 focus:ring-amber-500"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
@@ -214,7 +227,7 @@ const App: React.FC = () => {
                 <div className="w-full md:w-auto">
                   <label className="block text-xs font-bold uppercase text-stone-400 mb-2">Popular Sites</label>
                   <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                    {['Lepakshi', 'Amravati', 'Tirupati', 'Srisailam'].map(site => (
+                    {['Lepakshi', 'Amaravati', 'Tirupati', 'Srisailam'].map(site => (
                       <button 
                         key={site}
                         onClick={() => handlePlaceSelect(site)}
@@ -236,8 +249,7 @@ const App: React.FC = () => {
               <div className="text-center py-20">
                 <Compass size={64} className="mx-auto text-stone-300 mb-4" />
                 <h2 className="text-3xl font-heritage font-bold mb-2">Select a Destination</h2>
-                <p className="text-stone-500 mb-8">Discover monuments, culture, and literature of Andhra Pradesh</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mt-8">
                   {placesList.map(place => (
                     <button 
                       key={place}
@@ -253,122 +265,60 @@ const App: React.FC = () => {
             ) : loading ? (
               <div className="flex flex-col items-center justify-center py-32">
                 <Loader2 size={48} className="animate-spin text-amber-600 mb-4" />
-                <p className="text-xl font-heritage italic">Retrieving chronicles from the archives...</p>
+                <p className="text-xl font-heritage italic">Consulting the archives in {lang === 'en' ? 'English' : lang === 'te' ? 'తెలుగు' : 'हिंदी'}...</p>
               </div>
             ) : selectedPlace && (
               <div className="animate-fade-in">
-                {/* Header for Selected Place */}
                 <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
                   <div>
                     <button onClick={() => setSelectedPlace(null)} className="text-stone-500 hover:text-stone-800 text-sm mb-2 flex items-center gap-1">
-                      <ChevronRight className="rotate-180" size={16} /> Back to explore
+                      <ChevronRight className="rotate-180" size={16} /> {lang === 'en' ? 'Back' : lang === 'te' ? 'వెనుకకు' : 'पीछे'}
                     </button>
                     <h2 className="text-5xl font-bold font-heritage text-stone-900">{selectedPlace.name}</h2>
                   </div>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => setView('reconstruct')}
-                      className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-bold flex items-center gap-2"
-                    >
-                      <History size={16} /> Reconstruct Local Artifacts
-                    </button>
-                  </div>
                 </div>
 
-                {/* Images Gallery */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
-                  {selectedPlace.images.length > 0 ? (
-                    selectedPlace.images.slice(0, 3).map((img, i) => (
-                      <div key={i} className={`relative overflow-hidden rounded-2xl h-64 ${i === 0 ? 'md:col-span-2' : ''}`}>
-                        <img src={img.url} alt={img.caption} className="w-full h-full object-cover" />
-                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-                          <p className="text-white text-xs opacity-90">{img.caption}</p>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="col-span-full h-64 bg-stone-200 rounded-2xl flex items-center justify-center italic text-stone-500">
-                      No images found in archives
+                  {selectedPlace.images.slice(0, 3).map((img, i) => (
+                    <div key={i} className={`relative overflow-hidden rounded-2xl h-64 ${i === 0 ? 'md:col-span-2' : ''}`}>
+                      <img src={img.url} alt={img.caption} className="w-full h-full object-cover" />
                     </div>
-                  )}
+                  ))}
                 </div>
 
-                {/* Detailed Sections */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
                   <div className="lg:col-span-8">
-                    <Section title="Historical Overview" icon={<Info size={24} className="text-amber-700" />}>
+                    <Section title={lang === 'en' ? 'Historical Overview' : lang === 'te' ? 'చారిత్రక అవలోకనం' : 'ऐतिहासिक अवलोकन'} icon={<Info size={24} className="text-amber-700" />}>
                       <p>{selectedPlace.content?.overview}</p>
                     </Section>
-
-                    <Section title="Architecture & Sculptures" icon={<ImageIcon size={24} className="text-amber-700" />}>
+                    <Section title={lang === 'en' ? 'Architecture' : lang === 'te' ? 'వాస్తుశిల్పం' : 'वास्तुकला'} icon={<ImageIcon size={24} className="text-amber-700" />}>
                       <p>{selectedPlace.content?.architecture}</p>
                     </Section>
-
-                    <Section title="Traditions & Cuisine" icon={<Compass size={24} className="text-amber-700" />}>
-                      <div className="space-y-4">
-                        <div className="bg-amber-50 p-6 rounded-xl border border-amber-100">
-                          <h4 className="font-bold text-amber-900 mb-2">Local Flavors</h4>
-                          <p className="text-stone-700 italic">{selectedPlace.content?.cuisine}</p>
-                        </div>
-                        <p>{selectedPlace.content?.traditions}</p>
-                      </div>
-                    </Section>
-
-                    <Section title="Lifestyle & Agriculture" icon={<MapPin size={24} className="text-amber-700" />}>
-                      <div className="grid md:grid-cols-2 gap-6">
-                        <div className="p-4 bg-stone-100 rounded-xl">
-                          <h4 className="font-bold mb-2">Local Produce</h4>
-                          <p className="text-sm">{selectedPlace.content?.agriculture}</p>
-                        </div>
-                        <div className="p-4 bg-stone-100 rounded-xl">
-                          <h4 className="font-bold mb-2">Culture & Life</h4>
-                          <p className="text-sm">{selectedPlace.content?.lifestyle}</p>
-                        </div>
+                    <Section title={lang === 'en' ? 'Local Traditions' : lang === 'te' ? 'స్థానిక సంప్రదాయాలు' : 'स्थानीय परंपराएं'} icon={<Compass size={24} className="text-amber-700" />}>
+                      <p>{selectedPlace.content?.traditions}</p>
+                      <div className="bg-amber-50 p-6 rounded-xl border border-amber-100 mt-4">
+                        <h4 className="font-bold text-amber-900 mb-2">{lang === 'en' ? 'Regional Cuisine' : lang === 'te' ? 'ప్రాంతీయ వంటకాలు' : 'क्षेत्रीय व्यंजन'}</h4>
+                        <p className="text-stone-700">{selectedPlace.content?.cuisine}</p>
                       </div>
                     </Section>
                   </div>
 
                   <div className="lg:col-span-4">
                     <div className="sticky top-24 space-y-8">
-                      {/* Poets Section */}
                       <div className="bg-stone-900 text-stone-100 p-8 rounded-2xl shadow-xl">
-                        <div className="flex items-center gap-2 mb-6 text-amber-400">
-                          <BookOpen size={24} />
-                          <h3 className="text-xl font-bold uppercase tracking-widest text-sm">Literary Heritage</h3>
-                        </div>
+                        <h3 className="text-xl font-bold uppercase tracking-widest text-amber-400 mb-6 flex items-center gap-2 text-sm">
+                          <BookOpen size={20} /> {lang === 'en' ? 'Literary Figures' : lang === 'te' ? 'సాహిత్య వ్యక్తులు' : 'साहित्यिक हस्तियां'}
+                        </h3>
                         <div className="space-y-8">
                           {selectedPlace.content?.poets.map((poet, i) => (
                             <div key={i} className="border-l-2 border-amber-600/30 pl-4">
                               <h4 className="text-xl font-heritage font-bold text-amber-500">{poet.name}</h4>
-                              <p className="text-xs text-stone-400 mb-2 uppercase tracking-tight">{poet.period} • {poet.language}</p>
-                              <p className="text-sm mb-4 leading-relaxed opacity-80">{poet.contribution}</p>
-                              <div className="italic text-stone-300 bg-white/5 p-4 rounded-lg font-heritage text-lg leading-tight relative">
-                                <span className="absolute -top-2 left-2 text-4xl text-amber-600/20">"</span>
+                              <p className="text-xs text-stone-400 mb-2">{poet.period}</p>
+                              <div className="italic text-stone-300 bg-white/5 p-4 rounded-lg font-heritage text-lg leading-tight">
                                 {poet.famousVerse}
                               </div>
-                              <p className="mt-2 text-[10px] text-stone-500">Source: {poet.source}</p>
                             </div>
                           ))}
-                        </div>
-                      </div>
-
-                      {/* Map Simulation */}
-                      <div className="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm">
-                        <h4 className="font-bold mb-4 flex items-center gap-2">
-                          <MapPin size={18} className="text-amber-700" /> Regional Map
-                        </h4>
-                        <div className="aspect-square bg-stone-100 rounded-xl overflow-hidden relative">
-                          <div className="absolute inset-0 flex items-center justify-center opacity-30">
-                            <MapPin size={48} className="text-amber-800" />
-                          </div>
-                          <img 
-                            src={`https://picsum.photos/seed/${selectedPlace.id}/400/400?grayscale`} 
-                            className="w-full h-full object-cover opacity-50"
-                            alt="Map Placeholder"
-                          />
-                          <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur p-3 rounded-lg shadow-lg border border-stone-200 text-xs font-bold text-stone-800">
-                            Coordinate data for {selectedPlace.name} verified by Wiki.
-                          </div>
                         </div>
                       </div>
                     </div>
@@ -380,33 +330,26 @@ const App: React.FC = () => {
         )}
 
         {view === 'reconstruct' && (
-          <div className="max-w-5xl mx-auto px-4 py-16 animate-fade-in">
+          <div className="max-w-5xl mx-auto px-4 py-16">
             <div className="text-center mb-12">
               <History size={48} className="mx-auto text-amber-600 mb-4" />
-              <h2 className="text-4xl font-heritage font-bold mb-4">Monument Reconstruction</h2>
-              <p className="text-stone-500 max-w-2xl mx-auto">
-                Upload a photo of a damaged sculpture, inscription, or temple wall from Andhra Pradesh. Our AI will analyze historical architectural patterns to visualize its original state.
-              </p>
+              <h2 className="text-4xl font-heritage font-bold mb-4">{lang === 'en' ? 'Monument Reconstruction' : lang === 'te' ? 'స్మారక చిహ్నాల పునర్నిర్మాణం' : 'स्मारक पुनर्निर्माण'}</h2>
+              <p className="text-stone-500 max-w-2xl mx-auto">{lang === 'en' ? 'Visualize original grandeur through AI.' : lang === 'te' ? 'AI ద్వారా అసలు వైభవాన్ని ఊహించుకోండి.' : 'एआई के माध्यम से मूल भव्यता की कल्पना करें।'}</p>
             </div>
-
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Upload Box */}
               <div className="flex flex-col gap-4">
                 <div 
-                  className={`border-2 border-dashed rounded-3xl p-12 flex flex-col items-center justify-center transition cursor-pointer h-[400px] bg-white
-                    ${originalImage ? 'border-amber-500' : 'border-stone-300 hover:border-amber-400'}`}
+                  className="border-2 border-dashed rounded-3xl p-12 flex flex-col items-center justify-center transition cursor-pointer h-[400px] bg-white border-stone-300 hover:border-amber-400"
                   onClick={() => document.getElementById('file-upload')?.click()}
                 >
                   {originalImage ? (
                     <img src={originalImage} className="w-full h-full object-contain rounded-xl" alt="Original" />
                   ) : (
-                    <>
-                      <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mb-4">
-                        <Upload size={32} />
-                      </div>
-                      <p className="font-bold text-stone-800">Drop your image here</p>
-                      <p className="text-sm text-stone-500">or click to browse</p>
-                    </>
+                    <div className="text-center">
+                      <Upload size={32} className="mx-auto text-amber-600 mb-2" />
+                      <p className="font-bold">{lang === 'en' ? 'Upload Image' : lang === 'te' ? 'చిత్రాన్ని అప్‌లోడ్ చేయండి' : 'छवि अपलोड करें'}</p>
+                    </div>
                   )}
                   <input id="file-upload" type="file" hidden accept="image/*" onChange={handleFileUpload} />
                 </div>
@@ -414,44 +357,21 @@ const App: React.FC = () => {
                   <button 
                     onClick={startReconstruction}
                     disabled={reconLoading}
-                    className="w-full py-4 bg-amber-600 hover:bg-amber-700 text-white rounded-2xl font-bold shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
+                    className="w-full py-4 bg-amber-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2"
                   >
-                    {reconLoading ? <Loader2 size={24} className="animate-spin" /> : <History size={24} />}
-                    {reconLoading ? 'Analyzing Patterns...' : 'Visualize Original State'}
+                    {reconLoading ? <Loader2 className="animate-spin" /> : <History />} {lang === 'en' ? 'Reconstruct' : lang === 'te' ? 'పునర్నిర్మించు' : 'पुनर्निर्माण करें'}
                   </button>
                 )}
               </div>
-
-              {/* Reconstruction Result */}
-              <div className="bg-stone-100 rounded-3xl border border-stone-200 h-[400px] flex items-center justify-center relative overflow-hidden">
+              
+              <div className="bg-stone-100 rounded-3xl border border-stone-200 h-[400px] flex items-center justify-center">
                 {reconstructedImage ? (
                   <img src={reconstructedImage} className="w-full h-full object-contain rounded-xl" alt="Reconstructed" />
                 ) : (
-                  <div className="text-center px-8">
-                    {reconLoading ? (
-                      <div className="space-y-4">
-                        <Loader2 size={48} className="animate-spin text-amber-600 mx-auto" />
-                        <p className="text-lg font-heritage text-stone-600 italic">Consulting architectural treatises...</p>
-                      </div>
-                    ) : (
-                      <p className="text-stone-400 italic">Reconstructed visualization will appear here</p>
-                    )}
-                  </div>
+                  <p className="text-stone-400 italic">{reconLoading ? 'Processing...' : 'Result will appear here'}</p>
                 )}
-                <div className="absolute bottom-4 right-4 flex gap-2">
-                  <div className="bg-amber-600 text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-lg">AI Reconstructed</div>
-                </div>
               </div>
             </div>
-
-            {reconstructedImage && (
-              <div className="mt-8 bg-amber-50 border border-amber-200 p-6 rounded-2xl flex items-start gap-4">
-                <Info size={24} className="text-amber-700 flex-shrink-0 mt-1" />
-                <p className="text-sm text-amber-900 leading-relaxed italic">
-                  <strong>Historical Disclaimer:</strong> This is an AI-assisted historical reconstruction based on available references from Andhra Pradesh's architectural styles (Dravidian/Chalukyan). It is intended for educational visualization and may not represent 100% historical accuracy.
-                </p>
-              </div>
-            )}
           </div>
         )}
       </main>
@@ -460,109 +380,45 @@ const App: React.FC = () => {
       <div className="fixed bottom-6 right-6 z-50">
         <button 
           onClick={() => setIsChatOpen(!isChatOpen)}
-          className={`w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition transform hover:scale-110 active:scale-95 ${
-            isChatOpen ? 'bg-stone-800 text-white' : 'bg-amber-600 text-white'
-          }`}
+          className={`w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition ${isChatOpen ? 'bg-stone-800' : 'bg-amber-600'} text-white`}
         >
           {isChatOpen ? <X size={28} /> : <MessageSquare size={28} />}
         </button>
 
         {isChatOpen && (
-          <div className="absolute bottom-20 right-0 w-[350px] md:w-[400px] h-[500px] bg-white rounded-3xl shadow-2xl border border-stone-200 flex flex-col overflow-hidden animate-slide-up">
-            <div className="p-4 bg-amber-700 text-white flex items-center justify-between">
-              <div>
-                <h4 className="font-bold">Ask ITIHAASA</h4>
-                <p className="text-[10px] opacity-80">Heritage AI Assistant</p>
-              </div>
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              </div>
-            </div>
-
+          <div className="absolute bottom-20 right-0 w-[350px] md:w-[400px] h-[500px] bg-white rounded-3xl shadow-2xl border border-stone-200 flex flex-col overflow-hidden">
+            <div className="p-4 bg-amber-700 text-white font-bold">{lang === 'en' ? 'Ask ITIHAASA' : lang === 'te' ? 'ఇతిహాసను అడగండి' : 'इतिहास से पूछें'}</div>
             <div className="flex-grow p-4 overflow-y-auto space-y-4">
-              {chatMessages.length === 0 && (
-                <div className="text-center py-10">
-                  <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <MessageSquare size={32} className="text-stone-300" />
-                  </div>
-                  <p className="text-stone-500 text-sm">Ask me about Andhra's temples, kings, or poets!</p>
-                </div>
-              )}
               {chatMessages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${
-                    msg.role === 'user' 
-                      ? 'bg-amber-600 text-white rounded-br-none' 
-                      : 'bg-stone-100 text-stone-800 rounded-bl-none'
-                  }`}>
+                  <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-amber-600 text-white' : 'bg-stone-100 text-stone-800'}`}>
                     {msg.text}
                   </div>
                 </div>
               ))}
               <div ref={chatEndRef}></div>
             </div>
-
-            <div className="p-4 border-t border-stone-100">
-              <div className="flex gap-2">
-                <input 
-                  type="text" 
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleChatSend()}
-                  placeholder="Type your message..."
-                  className="flex-grow text-sm bg-stone-100 border-none rounded-xl focus:ring-2 focus:ring-amber-500"
-                />
-                <button 
-                  onClick={handleChatSend}
-                  className="p-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition"
-                >
-                  <ChevronRight size={20} />
-                </button>
-              </div>
+            <div className="p-4 border-t flex gap-2">
+              <input 
+                type="text" 
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleChatSend()}
+                className="flex-grow bg-stone-100 border-none rounded-xl"
+                placeholder="..."
+              />
+              <button onClick={handleChatSend} className="p-2 bg-amber-600 text-white rounded-xl"><ChevronRight /></button>
             </div>
           </div>
         )}
       </div>
 
-      <footer className="bg-stone-900 text-stone-500 py-12 px-4">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-          <div>
-            <h1 className="text-2xl font-bold font-heritage tracking-wider text-white">ITIHAASA</h1>
-            <p className="text-xs max-w-xs mt-2">Connecting history, architecture, and literature through artificial intelligence for Andhra Pradesh heritage preservation.</p>
-          </div>
-          <div className="flex gap-12 text-sm">
-            <div>
-              <h5 className="text-stone-100 font-bold mb-4 uppercase tracking-widest text-[10px]">Projects</h5>
-              <ul className="space-y-2">
-                <li>Explore</li>
-                <li>Reconstruct</li>
-                <li>Archive</li>
-              </ul>
-            </div>
-            <div>
-              <h5 className="text-stone-100 font-bold mb-4 uppercase tracking-widest text-[10px]">Region</h5>
-              <ul className="space-y-2">
-                <li>Andhra Pradesh</li>
-                <li>Rayalaseema</li>
-                <li>Coastal Andhra</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-        <div className="max-w-7xl mx-auto mt-12 pt-8 border-t border-stone-800 text-center text-[10px] uppercase tracking-widest">
-          © 2024 ITIHAASA AI • Cultural Heritage Preservation Framework
+      <footer className="bg-stone-900 text-stone-500 py-12 px-4 text-center">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-2xl font-bold font-heritage tracking-wider text-white">ఇతిహాస</h1>
+          <p className="mt-8 text-[10px] uppercase tracking-widest">© 2024 ITIHAASA AI • Cultural Heritage Preservation Framework</p>
         </div>
       </footer>
-
-      {/* Tailwind Utility for Animations */}
-      <style>{`
-        @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in { animation: fade-in 0.6s ease-out forwards; }
-        .animate-slide-up { animation: slide-up 0.4s ease-out forwards; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
     </div>
   );
 };
