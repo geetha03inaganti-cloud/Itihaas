@@ -1,0 +1,7 @@
+{
+  "name": "Copy of ITIHAASA - Heritage Reimagined",
+  "description": "An AI-powered cultural heritage platform for Andhra Pradesh, featuring monument reconstruction, historical insights, and literary explorations.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
